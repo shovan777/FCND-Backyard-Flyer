@@ -41,7 +41,7 @@ class BackyardFlyer(Drone):
 
         This triggers when `MsgID.LOCAL_POSITION` is received and self.local_position contains new data
         """
-        pass
+        
 
     def velocity_callback(self):
         """
@@ -61,14 +61,14 @@ class BackyardFlyer(Drone):
 
     def calculate_box(self):
         """TODO: Fill out this method
-        
+
         1. Return waypoints to fly a box
         """
         pass
 
     def arming_transition(self):
         """TODO: Fill out this method
-        
+
         1. Take control of the drone
         2. Pass an arming command
         3. Set the home location to current position
@@ -78,7 +78,7 @@ class BackyardFlyer(Drone):
 
     def takeoff_transition(self):
         """TODO: Fill out this method
-        
+
         1. Set target_position altitude to 3.0m
         2. Command a takeoff to 3.0m
         3. Transition to the TAKEOFF state
@@ -87,7 +87,7 @@ class BackyardFlyer(Drone):
 
     def waypoint_transition(self):
         """TODO: Fill out this method
-    
+
         1. Command the next waypoint position
         2. Transition to WAYPOINT state
         """
@@ -95,7 +95,7 @@ class BackyardFlyer(Drone):
 
     def landing_transition(self):
         """TODO: Fill out this method
-        
+
         1. Command the drone to land
         2. Transition to the LANDING state
         """
@@ -103,7 +103,7 @@ class BackyardFlyer(Drone):
 
     def disarming_transition(self):
         """TODO: Fill out this method
-        
+
         1. Command the drone to disarm
         2. Transition to the DISARMING state
         """
@@ -111,7 +111,7 @@ class BackyardFlyer(Drone):
 
     def manual_transition(self):
         """This method is provided
-        
+
         1. Release control of the drone
         2. Stop the connection (and telemetry log)
         3. End the mission
@@ -126,7 +126,7 @@ class BackyardFlyer(Drone):
 
     def start(self):
         """This method is provided
-        
+
         1. Open a log file
         2. Start the drone connection
         3. Close the log file
