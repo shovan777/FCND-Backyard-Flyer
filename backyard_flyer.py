@@ -49,12 +49,16 @@ class BackyardFlyer(Drone):
         if self.flight_state == States.WAYPOINT:
             north = self.local_position[0]
             east = self.local_position[1]
-            if abs(north - self.target_position[0]) <0.1 and abs(east-self.target_position[1]) < 0.1:
+            if abs(north - self.target_position[0]) <0.05 and abs(east-self.target_position[1]) < 0.05:
                 print('i reached waypoint')
                 if self.check_state[0] == True:
                     self.landing_transition()
                 else:
                     self.waypoint_transition()
+            else:
+                pos = self.target_position.tolist()
+                pos.append(0.0)
+                self.cmd_position(*pos)
 
 
     def velocity_callback(self):
