@@ -55,10 +55,10 @@ class BackyardFlyer(Drone):
                     self.landing_transition()
                 else:
                     self.waypoint_transition()
-            else:
-                pos = self.target_position.tolist()
-                pos.append(0.0)
-                self.cmd_position(*pos)
+            # else:
+            #     pos = self.target_position.tolist()
+            #     pos.append(0.0)
+            #     self.cmd_position(*pos)
 
 
     def velocity_callback(self):
