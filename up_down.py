@@ -31,14 +31,15 @@ class UpAndDownFlyer(Drone):
                                self.state_callback)
 
     def local_position_callback(self):
-        if self.flight_phase == Phases.TAKEOFF:
-
-            # coordinate conversion
-            altitude = -1.0 * self.local_position[2]
-
-            # check if altitude is within 95% of target
-            if altitude > 0.95 * self.target_position[2]:
-                self.landing_transition()
+        print(MsgID.LOCAL_POSITION)
+        # if self.flight_phase == Phases.TAKEOFF:
+        #
+        #     # coordinate conversion
+        #     altitude = -1.0 * self.local_position[2]
+        #
+        #     # check if altitude is within 95% of target
+        #     if altitude > 0.95 * self.target_position[2]:
+        #         self.landing_transition()
 
     def velocity_callback(self):
         if self.flight_phase == Phases.LANDING:
@@ -47,16 +48,17 @@ class UpAndDownFlyer(Drone):
                 self.disarming_transition()
 
     def state_callback(self):
-        if not self.in_mission:
-            return
-        if self.flight_phase == Phases.MANUAL:
-            self.arming_transition()
-        elif self.flight_phase == Phases.ARMING:
-            if self.armed:
-                self.takeoff_transition()
-        elif self.flight_phase == Phases.DISARMING:
-            if not self.armed:
-                self.manual_transition()
+        print(MsgID.STATE)
+        # if not self.in_mission:
+        #     return
+        # if self.flight_phase == Phases.MANUAL:
+        #     self.arming_transition()
+        # elif self.flight_phase == Phases.ARMING:
+        #     if self.armed:
+        #         self.takeoff_transition()
+        # elif self.flight_phase == Phases.DISARMING:
+        #     if not self.armed:
+        #         self.manual_transition()
 
     def arming_transition(self):
         print("arming transition")
@@ -101,9 +103,9 @@ class UpAndDownFlyer(Drone):
         self.stop_log()
 
 if __name__ == "__main__":
-    conn = MavlinkConnection('tcp:127.0.0.1:5760',
+    conn = MavlinkConnection('/dev/ttyACM0:921600',
                              threaded=False,
-                             PX4=False)
+                             PX4=True)
     drone = UpAndDownFlyer(conn)
     time.sleep(2)
     drone.start()
