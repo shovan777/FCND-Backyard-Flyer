@@ -80,7 +80,8 @@ class BackyardFlyer(Drone):
         """
         if not self.in_mission:
             return
-        if self.flight_state == States.MANUAL:
+        if self.flight_s
+        tate == States.MANUAL:
             self.arming_transition()
         elif self.flight_state == States.ARMING:
             if self.armed:
