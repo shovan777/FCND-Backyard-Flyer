@@ -17,7 +17,7 @@ class BackyardFlyer(Vehicle):
         self.check_state = {}
 
         # initial state
-        self._flightmode = States
+        self._flightmode = Statesx
 
 
 
