@@ -18,6 +18,7 @@ class States(Enum):
     WAYPOINT = 4
     LANDING = 5
     DISARMING = 6
+    STOP = 7
 
 
 class BackyardFlyer():
@@ -28,6 +29,7 @@ class BackyardFlyer():
         self.in_mission = True
         self.check_state = {}
         self.vehicle = vehicle
+        print(self.vehicle)
 
         # initial state
         self.vehicle.mode = VehicleMode('STABILIZE')
@@ -75,7 +77,7 @@ class BackyardFlyer():
         if self.flight_state == States.TAKEOFF:
             altitude = -1.0 * value.down
             if altitude > 0.95 * self.target_position[2]:
-                self.all_waypoints = [(0.0,0.0,10.0,0.0), (15.0,0.0,10.0,0), (15.0,15.0,10.0,0),(0.0,15.0,10.0,0.0)]
+                self.all_waypoints = [(0.0,0.0,5.0,0.0), (15.0,0.0,5.0,0), (15.0,15.0,5.0,0),(0.0,15.0,5.0,0.0)]
                 self.waypoint_transition()
         if self.flight_state == States.WAYPOINT:
             north = value.north
@@ -97,38 +99,39 @@ class BackyardFlyer():
                 self.disarming_transition()
 
     def state_callback(self, _, attr_name, value):
-        # print ("inside state_callback")
+        print ("inside state_callback")
         # print(self.flight_state)
         if not self.in_mission:
             print('not in mission')
-            return
-        if self.flight_state == States.MANUAL and self.vehicle.is_armable:
+            if self.vehicle.mode.name == 'STABILIZE':
+                self.stop_transition()            
+        elif self.flight_state == States.MANUAL and self.vehicle.is_armable:
             # print('babu bhaiya')
             self.arming_transition()
         elif self.flight_state == States.ARMING:
-            if self.vehicle.armed:
+            if self.vehicle.armed and self.vehicle.mode.name == 'GUIDED':
                 self.takeoff_transition()
         elif self.flight_state == States.DISARMING:
             if not self.vehicle.armed:
                 print('i am now going manual')
                 self.manual_transition()
-
+    
     def calculate_box(self):
         print("calculate_box")
         return self.all_waypoints.pop()
 
     def arming_transition(self):
         print("arming transition")
-        self.vehicle.mode = VehicleMode('GUIDED')
-        self.vehicle.armed = True
-        
         self.vehicle.home_location = vehicle.location.global_frame
         self.flight_state = States.ARMING
+        self.vehicle.mode = VehicleMode('GUIDED')
+        self.vehicle.armed = True
+
 
     def takeoff_transition(self):
         print('takeoff transition')
         print(self.vehicle.location.local_frame)
-        target_altitude = 10.0
+        target_altitude = 5.0
         self.target_position[2] = target_altitude
         self.vehicle.simple_takeoff(target_altitude)
         self.flight_state = States.TAKEOFF
@@ -149,27 +152,38 @@ class BackyardFlyer():
 
     def landing_transition(self):
         print('landing transition')
+        self.flight_state = States.LANDING
         self.vehicle.mode = VehicleMode('LAND')
         # print(self.vehicle.mode)
-        self.flight_state = States.LANDING
+        
                 
     def disarming_transition(self):
         print('disarm transition')
         # print(self.vehicle.location.local_frame)
-        self.vehicle.armed = False
         self.flight_state = States.DISARMING
+        self.vehicle.armed = False
+        print(self.vehicle)
         
     def manual_transition(self):
         print('manual transition')
+        self.flight_state = States.MANUAL
+        self.in_mission = False
         print(self.vehicle.mode)
-        self.vehicle.mode = VehicleMode('STABILIZE')        
+        self.vehicle.mode = VehicleMode('STABILIZE')
+        # time.sleep(2)        
         # while self.vehicle.mode.name != 'STABILIZE':
         #     print(self.vehicle.mode.name)
         #     pass
-        self.vehicle.close()
+        
+
+    def stop_transition(self):
+        print('stop transition')
+        self.flight_state = States.STOP
+        # self.vehicle.close()
         print(bool(self.vehicle))
-        self.in_mission = False
-        self.flight_state = States.MANUAL
+
+        
+        
 
 
 
@@ -217,11 +231,14 @@ except:
 # print(vehicle.location.local_frame)
 # print(vehicle.armed)
 # print(vehicle.velocity)
+print(vehicle)
 drone = BackyardFlyer(vehicle)
 
 # sys.exit(0)
 # ho ya nira kasari BackyardFlyer class ko code execute hune banunu
-while vehicle:
+# print('*************\t', drone.flight_state)
+while drone.flight_state != States.STOP:
     pass
 
+sys.exit(0)
 # time.sleep(1000)
