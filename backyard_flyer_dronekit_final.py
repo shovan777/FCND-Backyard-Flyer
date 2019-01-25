@@ -6,6 +6,9 @@ from enum import Enum
 import numpy as np
 import time
 
+# del imports
+import sys
+
 # flight state machine
 class States(Enum):
     MANUAL = 0
@@ -54,7 +57,7 @@ class BackyardFlyer():
         At time of writing, acceleration and yaw bits are ignored.
 
         """
-        print (self)
+        # print (self)
         msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
             0,       # time_boot_ms (not used)
             0, 0,    # target system, target component
@@ -79,7 +82,9 @@ class BackyardFlyer():
             east = value.east
             if abs(north - self.target_position[0]) < 1.0 and abs(east - self.target_position[1]) < 1.0:
                 print('I reached waypoint.')
+                print(self.check_state[0])
                 if self.check_state[0] == True:
+                    # print('check state is true')
                     self.landing_transition()
                 else:
                     self.waypoint_transition()
@@ -87,24 +92,25 @@ class BackyardFlyer():
     def velocity_callback(self, _, attr_name, value):
         # print("inside velocity_callback")
         if self.flight_state == States.LANDING:
-            if ((self.vehicle.location.global_frame.alt - self.vehicle.home_location.alt < 0.1) and
-                abs(self.vehicle.location.local_frame.down) < 0.01):
+            if ((self.vehicle.location.global_frame.alt - self.vehicle.home_location.alt < 0.5) and
+                abs(self.vehicle.location.local_frame.down) < 0.2):
                 self.disarming_transition()
 
     def state_callback(self, _, attr_name, value):
-        print ("inside state_callback")
-        print(self.flight_state)
+        # print ("inside state_callback")
+        # print(self.flight_state)
         if not self.in_mission:
             print('not in mission')
             return
         if self.flight_state == States.MANUAL and self.vehicle.is_armable:
-            print('babu bhaiya')
+            # print('babu bhaiya')
             self.arming_transition()
         elif self.flight_state == States.ARMING:
             if self.vehicle.armed:
                 self.takeoff_transition()
         elif self.flight_state == States.DISARMING:
             if not self.vehicle.armed:
+                print('i am now going manual')
                 self.manual_transition()
 
     def calculate_box(self):
@@ -112,7 +118,7 @@ class BackyardFlyer():
         return self.all_waypoints.pop()
 
     def arming_transition(self):
-        print("arming")
+        print("arming transition")
         self.vehicle.mode = VehicleMode('GUIDED')
         self.vehicle.armed = True
         
@@ -142,17 +148,26 @@ class BackyardFlyer():
             # self.flight_state = States.WAYPOINT
 
     def landing_transition(self):
+        print('landing transition')
         self.vehicle.mode = VehicleMode('LAND')
+        # print(self.vehicle.mode)
         self.flight_state = States.LANDING
                 
     def disarming_transition(self):
         print('disarm transition')
-        print(self.vehicle.location.local_frame)
+        # print(self.vehicle.location.local_frame)
         self.vehicle.armed = False
+        self.flight_state = States.DISARMING
         
     def manual_transition(self):
-        self.vehicle.mode = VehicleMode('STABILIZED')
+        print('manual transition')
+        print(self.vehicle.mode)
+        self.vehicle.mode = VehicleMode('STABILIZE')        
+        # while self.vehicle.mode.name != 'STABILIZE':
+        #     print(self.vehicle.mode.name)
+        #     pass
         self.vehicle.close()
+        print(bool(self.vehicle))
         self.in_mission = False
         self.flight_state = States.MANUAL
 
@@ -178,7 +193,10 @@ if not connection_string:
 # Connect to the Vehicle
 try:
     print('Connecting to vehicle on: %s' % connection_string)
-    vehicle = connect(connection_string, wait_ready=True)
+    # vehicle = connect(connection_string, wait_ready=True)
+    vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
+
+    print(bool(vehicle))
 # Bad TCP connection
 except socket.error:
     print 'No server exists!'
@@ -195,15 +213,15 @@ except dronekit.APIException:
 except:
     print 'Some other error!'
 
-print(vehicle.mode)
-print(vehicle.location.local_frame)
-print(vehicle.armed)
-print(vehicle.velocity)
+# print(vehicle.mode)
+# print(vehicle.location.local_frame)
+# print(vehicle.armed)
+# print(vehicle.velocity)
 drone = BackyardFlyer(vehicle)
 
-
+# sys.exit(0)
 # ho ya nira kasari BackyardFlyer class ko code execute hune banunu
-while True:
+while vehicle:
     pass
 
 # time.sleep(1000)
