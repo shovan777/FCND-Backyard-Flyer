@@ -1,16 +1,88 @@
+
+#%%
+from udacidrone import Drone
+from udacidrone.connection import MavlinkConnection
+conn = MavlinkConnection('/dev/ttyACM0,57600', threaded=True, PX4=True)
+drone = Drone(conn)
+drone.start()
+
+
+#%%
+get_ipython().run_line_magic('pinfo2', 'MavlinkConnection')
+
+
+#%%
+drone.take_control()
+
+
+#%%
+drone.release_control()
+
+
+#%%
+a = []
+
+
+#%%
+def papa():
+    return (1, 2, 3),(4,5,6)
+
+
+#%%
+a.append(*papa())
+
+
+#%%
+a
+
+
+#%%
+papa()
+
+
+#%%
+a
+
+
+#%%
+a.pop()
+
+
+#%%
+a
+
+
+#%%
+if !(len(a)): print(a)
+
+
+#%%
+from dronekit import connect, Vehicle, HasObservers
+
+
+#%%
+get_ipython().run_line_magic('pinfo2', 'connect')
+
+
+#%%
 from dronekit import connect, Vehicle, VehicleMode
 from enum import Enum
 import numpy as np
 from pymavlink import mavutil
 
+
+#%%
 class States(Enum):
     MANUAL = 0
-    ARMING = 1
-    TAKEOFF = 2
-    WAYPOINT = 3
-    LANDING = 4
-    DISARMING = 5
+    GUIDED = 1
+    ARMING = 2
+    TAKEOFF = 3
+    WAYPOINT = 4
+    LANDING = 5
+    DISARMING = 6
 
+
+#%%
 class BackyardFlyer(Vehicle):
     def __init__(self, *args):
         super(BackyardFlyer, self).__init__(*args)
@@ -18,13 +90,9 @@ class BackyardFlyer(Vehicle):
         self.all_waypoints = []
         self.in_mission = True
         self.check_state = {}
-        print(self.mode)
+
         # initial state
-        self.mode = VehicleMode('GUIDED')
-        while not (self.mode.name == 'STABILIZE'):
-            self.mode = VehicleMode('GUIDED')
-            print('waiting for stabilized mode')
-            print(self.mode.name)
+        self.mode = VehicleMode('STABILIZE')
         self.flight_state = States.MANUAL
         
         # register callbacks
@@ -68,7 +136,7 @@ class BackyardFlyer(Vehicle):
         if self.flight_state == States.TAKEOFF:
             altitude = -1.0 * value.down
             print(altitude, self.target_position[2])
-            if altitude > (0.95 * self.target_position[2]):
+            if altitude > 0.95 * self.target_position[2]:
                 self.all_waypoints = [(0.0,0.0,10.0,0.0), (30.0,0.0,10.0,0), (30.0,30.0,10.0,0),(0.0,30.0,10.0,0.0)]
                 self.waypoint_transition()
         if self.flight_state == States.WAYPOINT:
@@ -98,7 +166,7 @@ class BackyardFlyer(Vehicle):
             if self.armed:
                 self.takeoff_transition()
         elif self.flight_state == States.DISARMING:
-            if not self.armed and not (self.mode.name == 'GUIDED') :
+            if not self.armed:
                 self.manual_transition()
 
     def calculate_box(self):
@@ -151,25 +219,72 @@ class BackyardFlyer(Vehicle):
 
     def start(self):
         pass
+        
+
+        
 
 
-#Set up option parsing to get connection string
-import argparse  
-parser = argparse.ArgumentParser(description='Control Copter and send commands in GUIDED mode ')
-parser.add_argument('--connect', 
-                   help="Vehicle connection target string. If not specified, SITL automatically started and used.")
-args = parser.parse_args()
+#%%
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Demonstrates how to create attributes from MAVLink messages. ')
+    parser.add_argument('--connect', 
+                       help="Vehicle connection target string. If not specified, SITL automatically started and used.")
+    args = parser.parse_args()
 
-connection_string = args.connect
-sitl = None
-
-#Start SITL if no connection string specified
-if not connection_string:
-    import dronekit_sitl
+    connection_string = args.connect
+    sitl = None
+    
+    if not connection_string:
+        import dronekit_sitl
     sitl = dronekit_sitl.start_default()
     connection_string = sitl.connection_string()
+    vehicle = connect(connection_string, wait_ready=True, vehicle_class=BackyardFlyer)
+    
+    if sitl is not None:
+    sitl.stop()
 
-# Connect to the Vehicle
-print('Connecting to vehicle on: %s' % connection_string)
-vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True, vehicle_class=Vehicle)
-print(vehicle.mode)
+
+#%%
+get_ipython().run_line_magic('pinfo2', 'Vehicle.close')
+
+
+#%%
+import dronekit_sitl
+
+
+#%%
+sitl = dronekit_sitl.start_default()
+sitl.connection_string()
+
+
+#%%
+import dronekit_sitl
+# sitl = dronekit_sitl.start_default()
+# connection_string = sitl.connection_string()
+vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True, vehicle_class=BackyardFlyer)
+
+
+#%%
+vehicle.close()
+
+
+#%%
+sitl = dronekit_sitl.start_default()
+connection_string = sitl.connection_string()
+vehicle = connect(connection_string, wait_ready=True, vehicle_class=Vehicle)
+vehicle.home_location.
+
+
+#%%
+get_ipython().run_line_magic('pinfo', 'connect')
+
+
+#%%
+vehicle.location.local_frame.
+
+
+#%%
+# now lets do a new approach don't make a class
+# instead make vehicle class outside and callback also outside
+
+

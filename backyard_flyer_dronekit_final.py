@@ -1,40 +1,49 @@
-from dronekit import connect, Vehicle, VehicleMode
+from dronekit import connect, VehicleMode
+from pymavlink import mavutil
+import exceptions
+import socket
 from enum import Enum
 import numpy as np
-from pymavlink import mavutil
+import time
 
+# del imports
+import sys
+
+# flight state machine
 class States(Enum):
     MANUAL = 0
-    ARMING = 1
-    TAKEOFF = 2
-    WAYPOINT = 3
-    LANDING = 4
-    DISARMING = 5
+    GUIDED = 1
+    ARMING = 2
+    TAKEOFF = 3
+    WAYPOINT = 4
+    LANDING = 5
+    DISARMING = 6
+    STOP = 7
 
-class BackyardFlyer(Vehicle):
-    def __init__(self, *args):
-        super(BackyardFlyer, self).__init__(*args)
+
+class BackyardFlyer():
+    def __init__(self, vehicle):
+        print("inside initialization")
         self.target_position = np.array([0.0, 0.0, 0.0])
         self.all_waypoints = []
         self.in_mission = True
         self.check_state = {}
-        print(self.mode)
+        self.vehicle = vehicle
+        print(self.vehicle)
+
         # initial state
-        self.mode = VehicleMode('GUIDED')
-        while not (self.mode.name == 'STABILIZE'):
-            self.mode = VehicleMode('GUIDED')
-            print('waiting for stabilized mode')
-            print(self.mode.name)
+        self.vehicle.mode = VehicleMode('STABILIZE')
         self.flight_state = States.MANUAL
-        
+
         # register callbacks
-        self.add_attribute_listener('location.local_frame', self.local_location_callback)
-        self.add_attribute_listener('velocity', self.velocity_callback)
-        self.add_attribute_listener('armed', self.state_callback)
-        self.add_attribute_listener('mode', self.state_callback)
-        
+        self.vehicle.add_attribute_listener('location.local_frame', self.local_location_callback)
+        self.vehicle.add_attribute_listener('velocity', self.velocity_callback)
+        self.vehicle.add_attribute_listener('armed', self.state_callback)
+        self.vehicle.add_attribute_listener('mode', self.state_callback)
+
+        self.vehicle.mode = VehicleMode('GUIDED')
+
     def goto_position_target_local_ned(self, north, east, down):
-        print('simple goto')
         """	
         Send SET_POSITION_TARGET_LOCAL_NED command to request the vehicle fly to a specified 
         location in the North, East, Down frame.
@@ -50,7 +59,8 @@ class BackyardFlyer(Vehicle):
         At time of writing, acceleration and yaw bits are ignored.
 
         """
-        msg = self.message_factory.set_position_target_local_ned_encode(
+        # print (self)
+        msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
             0,       # time_boot_ms (not used)
             0, 0,    # target system, target component
             mavutil.mavlink.MAV_FRAME_LOCAL_NED, # frame
@@ -60,65 +70,70 @@ class BackyardFlyer(Vehicle):
             0, 0, 0, # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink)
             0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink) 
         # send command to vehicle
-        self.send_mavlink(msg)
+        self.vehicle.send_mavlink(msg)
 
 
-    def local_location_callback(_, self, attr_name, value):
-#         print('inside location callback')
+    def local_location_callback(self, _, attr_name, value):
         if self.flight_state == States.TAKEOFF:
             altitude = -1.0 * value.down
-            print(altitude, self.target_position[2])
-            if altitude > (0.95 * self.target_position[2]):
-                self.all_waypoints = [(0.0,0.0,10.0,0.0), (30.0,0.0,10.0,0), (30.0,30.0,10.0,0),(0.0,30.0,10.0,0.0)]
+            if altitude > 0.95 * self.target_position[2]:
+                self.all_waypoints = [(0.0,0.0,5.0,0.0), (15.0,0.0,5.0,0), (15.0,15.0,5.0,0),(0.0,15.0,5.0,0.0)]
                 self.waypoint_transition()
         if self.flight_state == States.WAYPOINT:
             north = value.north
             east = value.east
             if abs(north - self.target_position[0]) < 1.0 and abs(east - self.target_position[1]) < 1.0:
                 print('I reached waypoint.')
+                print(self.check_state[0])
                 if self.check_state[0] == True:
+                    # print('check state is true')
                     self.landing_transition()
                 else:
                     self.waypoint_transition()
 
-    def velocity_callback(_, self, attr_name, value):
-#         print('inside velocity callback')
+    def velocity_callback(self, _, attr_name, value):
+        # print("inside velocity_callback")
         if self.flight_state == States.LANDING:
-            if ((self.location.global_frame.lat - self.home_location.lat < 0.1) and
-               abs(self.location.local_frame.down) < 0.01):
+            if ((self.vehicle.location.global_frame.alt - self.vehicle.home_location.alt < 0.5) and
+                abs(self.vehicle.location.local_frame.down) < 0.2):
                 self.disarming_transition()
 
-    def state_callback(_, self, attr_name, value):
-#         print('inside state callback')
+    def state_callback(self, _, attr_name, value):
+        print ("inside state_callback")
+        # print(self.flight_state)
         if not self.in_mission:
-            return
-        if (self.flight_state == States.MANUAL) and self.is_armable:
+            print('not in mission')
+            if self.vehicle.mode.name == 'STABILIZE':
+                self.stop_transition()            
+        elif self.flight_state == States.MANUAL and self.vehicle.is_armable:
+            # print('babu bhaiya')
             self.arming_transition()
         elif self.flight_state == States.ARMING:
-            if self.armed:
+            if self.vehicle.armed and self.vehicle.mode.name == 'GUIDED':
                 self.takeoff_transition()
         elif self.flight_state == States.DISARMING:
-            if not self.armed and not (self.mode.name == 'GUIDED') :
+            if not self.vehicle.armed:
+                print('i am now going manual')
                 self.manual_transition()
-
+    
     def calculate_box(self):
-        print('calculating box')
+        print("calculate_box")
         return self.all_waypoints.pop()
 
     def arming_transition(self):
-        print('arming transition')
-        self.mode = VehicleMode('GUIDED')
-        self.armed = True
-
-        self.home_location = self.location.global_frame
+        print("arming transition")
+        self.vehicle.home_location = vehicle.location.global_frame
         self.flight_state = States.ARMING
+        self.vehicle.mode = VehicleMode('GUIDED')
+        self.vehicle.armed = True
+
 
     def takeoff_transition(self):
         print('takeoff transition')
-        print(self.location.local_frame)
-        target_altitude = 10.0
+        print(self.vehicle.location.local_frame)
+        target_altitude = 5.0
         self.target_position[2] = target_altitude
-        self.simple_takeoff(target_altitude)
+        self.vehicle.simple_takeoff(target_altitude)
         self.flight_state = States.TAKEOFF
 
     def waypoint_transition(self):
@@ -133,24 +148,43 @@ class BackyardFlyer(Vehicle):
         else:
             print('mission complete')
             self.check_state[0] = True
-            self.flight_state = States.WAYPOINT
+            # self.flight_state = States.WAYPOINT
 
     def landing_transition(self):
-        self.mode = VehicleMode('LAND')
+        print('landing transition')
         self.flight_state = States.LANDING
-
+        self.vehicle.mode = VehicleMode('LAND')
+        # print(self.vehicle.mode)
+        
+                
     def disarming_transition(self):
         print('disarm transition')
-        print(self.location.local_frame)
-        self.armed = False
-
+        # print(self.vehicle.location.local_frame)
+        self.flight_state = States.DISARMING
+        self.vehicle.armed = False
+        print(self.vehicle)
+        
     def manual_transition(self):
         print('manual transition')
-        self.mode = VehicleMode('STABILIZE')
-        self.close()
+        self.flight_state = States.MANUAL
+        self.in_mission = False
+        print(self.vehicle.mode)
+        self.vehicle.mode = VehicleMode('STABILIZE')
+        # time.sleep(2)        
+        # while self.vehicle.mode.name != 'STABILIZE':
+        #     print(self.vehicle.mode.name)
+        #     pass
+        
 
-    def start(self):
-        pass
+    def stop_transition(self):
+        print('stop transition')
+        self.flight_state = States.STOP
+        # self.vehicle.close()
+        print(bool(self.vehicle))
+
+        
+        
+
 
 
 #Set up option parsing to get connection string
@@ -163,6 +197,7 @@ args = parser.parse_args()
 connection_string = args.connect
 sitl = None
 
+
 #Start SITL if no connection string specified
 if not connection_string:
     import dronekit_sitl
@@ -170,6 +205,40 @@ if not connection_string:
     connection_string = sitl.connection_string()
 
 # Connect to the Vehicle
-print('Connecting to vehicle on: %s' % connection_string)
-vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True, vehicle_class=Vehicle)
-print(vehicle.mode)
+try:
+    print('Connecting to vehicle on: %s' % connection_string)
+    # vehicle = connect(connection_string, wait_ready=True)
+    vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
+
+    print(bool(vehicle))
+# Bad TCP connection
+except socket.error:
+    print 'No server exists!'
+
+# Bad TTY connection
+except exceptions.OSError as e:
+    print 'No serial exists!'
+
+# API Error
+except dronekit.APIException:
+    print 'Timeout!'
+
+# Other error
+except:
+    print 'Some other error!'
+
+# print(vehicle.mode)
+# print(vehicle.location.local_frame)
+# print(vehicle.armed)
+# print(vehicle.velocity)
+print(vehicle)
+drone = BackyardFlyer(vehicle)
+
+# sys.exit(0)
+# ho ya nira kasari BackyardFlyer class ko code execute hune banunu
+# print('*************\t', drone.flight_state)
+while drone.flight_state != States.STOP:
+    pass
+
+sys.exit(0)
+# time.sleep(1000)
