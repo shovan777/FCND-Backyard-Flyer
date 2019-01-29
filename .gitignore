@@ -14,3 +14,5 @@ Logs
 __pycache__/
 *.pyc
 udacity_prog/
+.vscode/
+.ipynb_checkpoints/
