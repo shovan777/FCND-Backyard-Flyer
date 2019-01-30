@@ -207,8 +207,8 @@ if not connection_string:
 # Connect to the Vehicle
 try:
     print('Connecting to vehicle on: %s' % connection_string)
-    # vehicle = connect(connection_string, wait_ready=True)
-    vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
+    vehicle = connect(connection_string, wait_ready=True)
+    # vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
 
     print(bool(vehicle))
 # Bad TCP connection
