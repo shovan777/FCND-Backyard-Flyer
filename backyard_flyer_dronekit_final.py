@@ -29,10 +29,12 @@ class BackyardFlyer():
         self.in_mission = True
         self.check_state = {}
         self.vehicle = vehicle
-        print(self.vehicle)
+        # print(self.vehicle)
 
         # initial state
         self.vehicle.mode = VehicleMode('STABILIZE')
+        while(vehicle.mode.name != 'STABILIZE'):
+            pass
         self.flight_state = States.MANUAL
 
         # register callbacks
@@ -42,6 +44,8 @@ class BackyardFlyer():
         self.vehicle.add_attribute_listener('mode', self.state_callback)
 
         self.vehicle.mode = VehicleMode('GUIDED')
+        print(self.vehicle.is_armable)
+        print(self.vehicle.mode)
 
     def goto_position_target_local_ned(self, north, east, down):
         """	
@@ -162,7 +166,7 @@ class BackyardFlyer():
         # print(self.vehicle.location.local_frame)
         self.flight_state = States.DISARMING
         self.vehicle.armed = False
-        print(self.vehicle)
+        # print(self.vehicle)
         
     def manual_transition(self):
         print('manual transition')
@@ -210,7 +214,7 @@ try:
     # vehicle = connect(connection_string, wait_ready=True)
     vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
 
-    print(bool(vehicle))
+    # print(bool(vehicle))
 # Bad TCP connection
 except socket.error:
     print 'No server exists!'
@@ -231,7 +235,7 @@ except:
 # print(vehicle.location.local_frame)
 # print(vehicle.armed)
 # print(vehicle.velocity)
-print(vehicle)
+# print(vehicle)
 drone = BackyardFlyer(vehicle)
 
 # sys.exit(0)
