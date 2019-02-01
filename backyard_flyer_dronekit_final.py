@@ -29,12 +29,14 @@ class BackyardFlyer():
         self.in_mission = True
         self.check_state = {}
         self.vehicle = vehicle
-        # print(self.vehicle)
+        print(self.vehicle)
 
         # initial state
         self.vehicle.mode = VehicleMode('STABILIZE')
-        while(vehicle.mode.name != 'STABILIZE'):
-            pass
+        # time.sleep(5)
+        print(self.vehicle.mode)
+        # while(vehicle.mode.name != 'STABILIZE'):
+        #     pass
         self.flight_state = States.MANUAL
 
         # register callbacks
@@ -44,6 +46,7 @@ class BackyardFlyer():
         self.vehicle.add_attribute_listener('mode', self.state_callback)
 
         self.vehicle.mode = VehicleMode('GUIDED')
+        # time.sleep(5)
         print(self.vehicle.is_armable)
         print(self.vehicle.mode)
 
@@ -81,7 +84,7 @@ class BackyardFlyer():
         if self.flight_state == States.TAKEOFF:
             altitude = -1.0 * value.down
             if altitude > 0.95 * self.target_position[2]:
-                self.all_waypoints = [(0.0,0.0,5.0,0.0), (15.0,0.0,5.0,0), (15.0,15.0,5.0,0),(0.0,15.0,5.0,0.0)]
+                self.all_waypoints = [(0.0,0.0,5.0,0.0), (5.0,0.0,5.0,0), (5.0,5.0,5.0,0),(0.0,5.0,5.0,0.0)]
                 self.waypoint_transition()
         if self.flight_state == States.WAYPOINT:
             north = value.north
@@ -211,8 +214,8 @@ if not connection_string:
 # Connect to the Vehicle
 try:
     print('Connecting to vehicle on: %s' % connection_string)
-    # vehicle = connect(connection_string, wait_ready=True)
-    vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
+    vehicle = connect(connection_string, wait_ready=True)
+    # vehicle = connect('tcp:127.0.0.1:5762', wait_ready=True)
 
     # print(bool(vehicle))
 # Bad TCP connection
